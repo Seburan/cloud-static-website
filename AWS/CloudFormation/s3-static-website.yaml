@@ -41,7 +41,7 @@ Resources:
       AccessControl: PublicRead
       WebsiteConfiguration:
         IndexDocument: index.html
-        ErrorDocument: 404.html
+        ErrorDocument: error.html
       Tags:
         - Key: project
           Value: !Ref ProjectName
@@ -61,54 +61,36 @@ Resources:
             Effect: Allow
             Principal: '*'
             Action: 's3:GetObject'
-            Resource: !Join
-              - ''
-              - - 'arn:aws:s3:::'
-                - !Ref S3SiteBucket
-                - /*
+            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref S3SiteBucket , '/*' ] ]
       Bucket: !Ref S3SiteBucket
+
 # bucket policy to allow severin.jp group members to admin the site
   SiteAdminBucketPolicy:
-    Type: 'AWS::S3::BucketPolicy'
+    Type: 'AWS::IAM::Policy'
     Properties:
+      PolicyName: S3SiteBucketAdminPolicy
       PolicyDocument:
         Id: SiteAdminBucketPolicy
         Version: 2012-10-17
         Statement:
-          - Sid: SiteAdminForBucketsObjects
+          - Sid: S3SiteBucketAdminPolicy
             Effect: Allow
-            Principal: !GetAtt
-              - ProjectGroup
-              - Arn
             Action: 's3:*'
-            Resource: !Join
-              - ''
-              - - 'arn:aws:s3:::'
-                - !Ref S3SiteBucket
-                - /*
-      Bucket: !Ref S3SiteBucket
+            Resource: !Join [ '', [ 'arn:aws:s3:::', !Ref S3SiteBucket , '/*' ] ]
+      Groups: [ !Ref ProjectGroup ]
 
 # outputs
 
 Outputs:
   WebsiteURL:
-    Value: !GetAtt
-      - S3SiteBucket
-      - WebsiteURL
+    Value: !GetAtt S3SiteBucket.WebsiteURL
     Description: URL for website hosted on S3
   S3BucketSecureURL:
-    Value: !Join
-      - ''
-      - - 'https://'
-        - !GetAtt
-          - S3SiteBucket
-          - DomainName
+    Value: !Join [ '', [ 'https://', !GetAtt S3SiteBucket.DomainName ] ]
     Description: URL of S3 bucket to hold website content
   SiteAdminAccessKey:
     Value: !Ref SiteAdminAccessKey
     Description: SiteAdmin Access Key
   SiteAdminSecret:
-    Value: !GetAtt
-      - SiteAdminAccessKey
-      - SecretAccessKey
+    Value: !GetAtt SiteAdminAccessKey.SecretAccessKey
     Description: Site Admin SecretAccessKey
