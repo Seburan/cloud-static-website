@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  ProjectName:
+    Description: Project / Organization
+    Type: String
+  DomainName:
+    Description: Domain or Sub Domain name for your website (example.com)
+    Type: String
+  SiteAdminName:
+    Description: S3 Site Bucket Administrator Username
+    Type: String
+
+Resources:
+  # severin.jp group
+  ProjectGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: !Ref ProjectName
+      Path: /
+
+  # severin.jp site administrator
+  SiteAdmin:
+    Type: 'AWS::IAM::User'
+    Properties:
+      Groups: [!Ref ProjectGroup]
+      Path: /
+      UserName: !Ref SiteAdminName
+
+  # severin.jp site administrator API Key
+  SiteAdminAccessKey:
+    Type: 'AWS::IAM::AccessKey'
+    Properties:
+      Status: Active
+      UserName: !Ref SiteAdmin
+
+  # S3 bucket for hosting severin.jp static content
+  S3SiteBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: !Ref DomainName
+      AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: 404.html
+      Tags:
+        - Key: project
+          Value: !Ref ProjectName
+        - Key: name
+          Value: S3SiteBucket
+    DeletionPolicy: Delete
+
+# bucket policy to allow visitors
+  PublicBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      PolicyDocument:
+        Id: PublicBucketPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3SiteBucket
+                - /*
+      Bucket: !Ref S3SiteBucket
+# bucket policy to allow severin.jp group members to admin the site
+  SiteAdminBucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      PolicyDocument:
+        Id: SiteAdminBucketPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: SiteAdminForBucketsObjects
+            Effect: Allow
+            Principal: !GetAtt
+              - ProjectGroup
+              - Arn
+            Action: 's3:*'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3SiteBucket
+                - /*
+      Bucket: !Ref S3SiteBucket
+
+# outputs
+
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt
+      - S3SiteBucket
+      - WebsiteURL
+    Description: URL for website hosted on S3
+  S3BucketSecureURL:
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !GetAtt
+          - S3SiteBucket
+          - DomainName
+    Description: URL of S3 bucket to hold website content
+  SiteAdminAccessKey:
+    Value: !Ref SiteAdminAccessKey
+    Description: SiteAdmin Access Key
+  SiteAdminSecret:
+    Value: !GetAtt
+      - SiteAdminAccessKey
+      - SecretAccessKey
+    Description: Site Admin SecretAccessKey
