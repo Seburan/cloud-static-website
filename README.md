@@ -36,3 +36,10 @@ WIP
 ## Microsoft Azure
 
 WIP
+
+# Deployment Scripts
+
+## AWS
+
+* [aws-s3-sync](http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html)
+* [include-exclude-filters](http://docs.aws.amazon.com/cli/latest/reference/s3/index.html#use-of-exclude-and-include-filters)
